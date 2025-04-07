@@ -32,7 +32,7 @@ fn main() {
         })
         .insert_resource(UrdfRobotHandle(None))
         .add_systems(Startup, setup)
-        .add_systems(Update, control_motors)
+        // .add_systems(Update, control_motors)
         .add_systems(Update, start_simulation.run_if(in_state(AppState::Loading)))
         .add_plugins(ScenePlugin)
         .run();
@@ -96,7 +96,7 @@ fn control_motors(
         let mut velocities: Vec<f32> = Vec::new();
 
         for _ in 0..50 {
-            velocities.push(5.0);
+            velocities.push(1.0);
         }
 
         ew_control_motors.send(ControlMotors { handle, velocities });
@@ -113,8 +113,8 @@ enum AppState {
 #[allow(deprecated)]
 fn setup(mut ew_load_robot: EventWriter<LoadRobot>) {
     ew_load_robot.send(LoadRobot {
-        urdf_path: "robots/unitree_a1/urdf/a1.urdf".to_string(),
-        mesh_dir: "assets/robots/unitree_a1/urdf/".to_string(),
+        urdf_path: "robots/mycobot_pro_600/mycobot_pro_600.urdf".to_string(),
+        mesh_dir: "assets/robots/mycobot_pro_600/".to_string(),
         interaction_groups: None,
         marker: None,
     });
