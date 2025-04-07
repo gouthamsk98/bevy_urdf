@@ -1,5 +1,7 @@
 use bevy::{
-    color::palettes::css::WHITE, input::common_conditions::input_toggle_active, prelude::*,
+    color::palettes::css::WHITE,
+    input::common_conditions::input_toggle_active,
+    prelude::*,
 };
 use bevy_flycam::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -7,11 +9,11 @@ use bevy_rapier3d::prelude::*;
 use bevy_stl::StlPlugin;
 use rapier3d::prelude::InteractionGroups;
 
-use bevy_urdf::events::{ControlMotors, LoadRobot, RobotLoaded};
-use bevy_urdf::events::{SensorsRead, SpawnRobot};
+use bevy_urdf::events::{ ControlMotors, LoadRobot, RobotLoaded };
+use bevy_urdf::events::{ SensorsRead, SpawnRobot };
 use bevy_urdf::plugin::UrdfPlugin;
 use bevy_urdf::urdf_asset_loader::UrdfAsset;
-
+use bevy_urdf::scene::ScenePlugin;
 use rand::Rng;
 
 fn main() {
@@ -20,10 +22,8 @@ fn main() {
             DefaultPlugins,
             UrdfPlugin,
             StlPlugin,
-            NoCameraPlayerPlugin,
             RapierPhysicsPlugin::<NoUserData>::default(),
-            RapierDebugRenderPlugin::default(),
-            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::Escape)),
+            // WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::Escape)),
         ))
         .init_state::<AppState>()
         .insert_resource(MovementSettings {
@@ -32,8 +32,9 @@ fn main() {
         })
         .insert_resource(UrdfRobotHandle(None))
         .add_systems(Startup, setup)
-        .add_systems(Update, (control_motors, print_sensor_values))
+        .add_systems(Update, control_motors)
         .add_systems(Update, start_simulation.run_if(in_state(AppState::Loading)))
+        .add_plugins(ScenePlugin)
         .run();
 }
 
@@ -44,7 +45,7 @@ fn start_simulation(
     mut commands: Commands,
     mut er_robot_loaded: EventReader<RobotLoaded>,
     mut ew_spawn_robot: EventWriter<SpawnRobot>,
-    mut state: ResMut<NextState<AppState>>,
+    mut state: ResMut<NextState<AppState>>
 ) {
     for event in er_robot_loaded.read() {
         ew_spawn_robot.send(SpawnRobot {
@@ -67,12 +68,20 @@ fn print_sensor_values(mut er_read_sensors: EventReader<SensorsRead>) {
             let rot = transform.rotation;
             println!(
                 "\t{} {} {} {} {} {} {}",
-                trans.x, trans.y, trans.z, rot.x, rot.y, rot.z, rot.w
+                trans.x,
+                trans.y,
+                trans.z,
+                rot.x,
+                rot.y,
+                rot.z,
+                rot.w
             );
         }
 
-        let joint_angles_string: Vec<String> =
-            event.joint_angles.iter().map(|a| a.to_string()).collect();
+        let joint_angles_string: Vec<String> = event.joint_angles
+            .iter()
+            .map(|a| a.to_string())
+            .collect();
         println!("\tjoint_angles:");
         println!("\t{}", joint_angles_string.join(" "));
     }
@@ -80,14 +89,14 @@ fn print_sensor_values(mut er_read_sensors: EventReader<SensorsRead>) {
 
 fn control_motors(
     robot_handle: Res<UrdfRobotHandle>,
-    mut ew_control_motors: EventWriter<ControlMotors>,
+    mut ew_control_motors: EventWriter<ControlMotors>
 ) {
     if let Some(handle) = robot_handle.0.clone() {
         let mut rng = rand::rng();
         let mut velocities: Vec<f32> = Vec::new();
 
         for _ in 0..50 {
-            velocities.push(rng.random_range(-5.0..5.0));
+            velocities.push(5.0);
         }
 
         ew_control_motors.send(ControlMotors { handle, velocities });
@@ -102,40 +111,10 @@ enum AppState {
 }
 
 #[allow(deprecated)]
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut ew_load_robot: EventWriter<LoadRobot>,
-) {
-    // Scene
-    commands.insert_resource(AmbientLight {
-        color: WHITE.into(),
-        brightness: 300.0,
-    });
-
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(3.0, 3.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        },
-        FlyCam,
-    ));
-
-    // ground
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(180., 0.1, 180.))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-        Collider::cuboid(90., 0.05, 90.),
-        Transform::from_xyz(0.0, -1.0, 0.0),
-        RigidBody::Fixed,
-    ));
-
-    // load robot
-
+fn setup(mut ew_load_robot: EventWriter<LoadRobot>) {
     ew_load_robot.send(LoadRobot {
-        urdf_path: "robots/flamingo_edu/urdf/Edu_v4.urdf".to_string(),
-        mesh_dir: "assets/robots/flamingo_edu/urdf/".to_string(),
+        urdf_path: "robots/unitree_a1/urdf/a1.urdf".to_string(),
+        mesh_dir: "assets/robots/unitree_a1/urdf/".to_string(),
         interaction_groups: None,
         marker: None,
     });
