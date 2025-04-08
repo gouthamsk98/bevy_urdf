@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<robot  xmlns:xacro="http://www.ros.org/wiki/xacro" name="firefighter" >
+	
+<xacro:property name="width" value=".2" />
+
+  <link name="joint1">
+    <visual>
+      <geometry>
+	     <!--- 0.0 0 -0.04  1.5708 3.14159-->
+       <mesh filename="./joint1.stl"/>
+      </geometry>
+      <origin xyz = "0.0 0 0 " rpy = " 0 0 -1.5708"/>
+    </visual>
+    <collision>
+      <geometry>
+	     <!--- 0.0 0 -0.04  1.5708 3.14159-->
+       <mesh filename="./joint1.stl"/>
+        </geometry>
+        <origin xyz = "0.0 0 0 " rpy = " 0 0 -1.5708"/>
+    </collision>
+  </link>
+
+  <link name="joint2">
+    <visual>
+      <geometry>
+       <mesh filename="./joint2.stl"/>
+      </geometry>
+      <origin xyz = "0.0 0 -6.096 " rpy = " 0 0 -1.5708"/>
+    </visual>
+    <collision>
+     <geometry>
+       <mesh filename="./joint2.stl"/>
+      </geometry>
+      <origin xyz = "0.0 0 -6.096 " rpy = " 0 0 -1.5708"/>
+    </collision>
+  </link>
+<!-- 
+ <link name="joint3">
+    <visual>
+      <geometry>
+       <mesh filename="./joint3.stl"/>
+      </geometry>
+    <origin xyz = "0.0 0 3.256" rpy = " 0 -1.5708 0"/>
+    </visual>
+    <collision>
+      <geometry>
+       <mesh filename="./joint3.stl"/>
+      </geometry>
+      <origin xyz = "0.0 0 3.256 " rpy = " 0 -1.5708 0"/>
+    </collision>
+  </link> -->
+
+  <joint name="joint2_to_joint1" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort = "1000.0" lower = "-2.9322" upper = "2.9322" velocity = "0"/>
+    <parent link="joint1"/>
+    <child link="joint2"/>
+    <origin xyz= "0 0 7.096" rpy = "0 0 0"/>  
+  </joint>
+
+
+  <!-- <joint name="joint3_to_joint2" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort = "1000.0" lower = "-2.3562" upper = "2.3562" velocity = "0"/>
+    <parent link="joint2"/>
+    <child link="joint3"/>
+    <origin xyz= "3.256 0 6.096" rpy = "0 1.5708 -1.5708"/>  
+  </joint> -->
+
+
+</robot>
+

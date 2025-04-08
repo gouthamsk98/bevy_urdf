@@ -14,7 +14,7 @@ use bevy_urdf::events::{ SensorsRead, SpawnRobot };
 use bevy_urdf::plugin::UrdfPlugin;
 use bevy_urdf::urdf_asset_loader::UrdfAsset;
 use bevy_urdf::scene::ScenePlugin;
-use rand::Rng;
+// use rand::Rng;
 
 fn main() {
     App::new()
@@ -32,7 +32,7 @@ fn main() {
         })
         .insert_resource(UrdfRobotHandle(None))
         .add_systems(Startup, setup)
-        // .add_systems(Update, control_motors)
+        .add_systems(Update, control_motors)
         .add_systems(Update, start_simulation.run_if(in_state(AppState::Loading)))
         .add_plugins(ScenePlugin)
         .run();
@@ -92,11 +92,11 @@ fn control_motors(
     mut ew_control_motors: EventWriter<ControlMotors>
 ) {
     if let Some(handle) = robot_handle.0.clone() {
-        let mut rng = rand::rng();
+        // let mut rng = rand::rng();
         let mut velocities: Vec<f32> = Vec::new();
 
         for _ in 0..50 {
-            velocities.push(1.0);
+            velocities.push(4.88);
         }
 
         ew_control_motors.send(ControlMotors { handle, velocities });
@@ -113,8 +113,8 @@ enum AppState {
 #[allow(deprecated)]
 fn setup(mut ew_load_robot: EventWriter<LoadRobot>) {
     ew_load_robot.send(LoadRobot {
-        urdf_path: "robots/mycobot_pro_600/mycobot_pro_600.urdf".to_string(),
-        mesh_dir: "assets/robots/mycobot_pro_600/".to_string(),
+        urdf_path: "robots/mycobot_280_m5_stl/mycobot_280_m5.urdf".to_string(),
+        mesh_dir: "assets/robots/mycobot_280_m5_stl/".to_string(),
         interaction_groups: None,
         marker: None,
     });
