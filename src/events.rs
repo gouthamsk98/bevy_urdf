@@ -184,14 +184,15 @@ pub(crate) fn handle_spawn_robot(
 
                     let transform = Transform::from_translation(bevy_vec).with_rotation(bevy_quat);
 
-                    children.spawn((
-                        mesh_3d,
-                        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.4, 0.3))),
-                        UrdfRobotRigidBodyHandle(body_handles[index]),
-                        RapierContextEntityLink(rapier_context_simulation_entity),
-                        transform,
-                        Sleeping::disabled(),
-                    ));
+                    children
+                        .spawn((
+                            mesh_3d,
+                            MeshMaterial3d(materials.add(Color::srgb(0.3, 0.4, 0.3))),
+                            UrdfRobotRigidBodyHandle(body_handles[index]),
+                            RapierContextEntityLink(rapier_context_simulation_entity),
+                            transform,
+                        ))
+                        .insert(Sleeping::disabled());
                 }
             });
 
