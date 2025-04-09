@@ -112,6 +112,8 @@ pub(crate) fn handle_spawn_robot(
                     for link in &handles.links {
                         if let Some(body) = rigid_body_set.bodies.get_mut(link.body) {
                             body.activation_mut().sleeping = false;
+                            body.activation_mut().angular_threshold = -1.0;
+                            body.activation_mut().linear_threshold = -1.0;
                         }
                     }
                 }
