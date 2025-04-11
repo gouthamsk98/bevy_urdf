@@ -18,6 +18,11 @@ pub struct SpawnRobot {
 }
 
 #[derive(Clone, Event)]
+pub struct DespawnRobot {
+    pub handle: Handle<UrdfAsset>,
+}
+
+#[derive(Clone, Event)]
 pub struct RobotSpawned {
     pub handle: Handle<UrdfAsset>,
 }
@@ -41,6 +46,7 @@ pub struct LoadRobot {
     pub urdf_path: String,
     pub mesh_dir: String,
     pub interaction_groups: Option<InteractionGroups>,
+    pub translation_shift: Option<Vec3>,
     /// this field can be used to keep causality of `LoadRobot -> RobotLoaded`` event chain
     pub marker: Option<u32>,
 }
@@ -193,13 +199,32 @@ pub(crate) fn handle_spawn_robot(
 
                     let transform = Transform::from_translation(bevy_vec).with_rotation(bevy_quat);
 
-                    children.spawn((
+                    let ec = children.spawn((
                         mesh_3d,
                         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.4, 0.3))),
                         UrdfRobotRigidBodyHandle(body_handles[index]),
                         RapierContextEntityLink(rapier_context_simulation_entity),
                         transform,
                     ));
+
+                    let entity_id = ec.id().index();
+
+                    for (
+                        _entity,
+                        rigid_body_set,
+                        mut collider_set,
+                        _,
+                    ) in q_rapier_context.iter_mut() {
+                        if let Some(rigid_body) = rigid_body_set.bodies.get(body_handles[index]) {
+                            let collider_handles = rigid_body.colliders();
+                            for collider_handle in collider_handles.iter() {
+                                let collider = collider_set.colliders
+                                    .get_mut(collider_handle.clone())
+                                    .unwrap();
+                                collider.user_data = entity_id as u128;
+                            }
+                        }
+                    }
                 }
             });
 
@@ -216,6 +241,61 @@ pub(crate) fn handle_spawn_robot(
     }
 }
 
+pub(crate) fn handle_despawn_robot(
+    mut commands: Commands,
+    urdf_assets: Res<Assets<UrdfAsset>>,
+    mut q_rapier_context: Query<
+        (
+            Entity,
+            &mut RapierContextSimulation,
+            &mut RapierRigidBodySet,
+            &mut RapierContextColliders,
+            &mut RapierContextJoints,
+        )
+    >,
+    q_urdf_robots: Query<(Entity, &URDFRobot)>,
+    q_urdf_rigid_body_handles: Query<(Entity, &Parent, &UrdfRobotRigidBodyHandle)>,
+    mut er_spawn_robot: EventReader<DespawnRobot>
+) {
+    for event in er_spawn_robot.read() {
+        let robot_handle = event.handle.clone();
+        if let Some(_) = urdf_assets.get(robot_handle.id()) {
+            for (
+                _entity,
+                mut simulation,
+                mut rigid_body_set,
+                mut collider_set,
+                mut rapier_context_joints,
+            ) in q_rapier_context.iter_mut() {
+                for (entity, parent, urdf_rigid_body_handle) in q_urdf_rigid_body_handles.iter() {
+                    if let Ok((_, parent_urdf_robot)) = q_urdf_robots.get(parent.get()) {
+                        if parent_urdf_robot.handle != event.handle {
+                            continue;
+                        }
+
+                        let mut impulse_joints = rapier_context_joints.impulse_joints.clone();
+                        let mut multibody_joints = rapier_context_joints.multibody_joints.clone();
+
+                        rigid_body_set.bodies.remove(
+                            urdf_rigid_body_handle.0.clone(),
+                            &mut simulation.islands,
+                            &mut collider_set.colliders,
+                            &mut impulse_joints,
+                            &mut multibody_joints,
+                            true
+                        );
+
+                        rapier_context_joints.multibody_joints = multibody_joints;
+                        rapier_context_joints.impulse_joints = impulse_joints;
+                    }
+
+                    commands.entity(entity).despawn();
+                }
+            }
+        }
+    }
+}
+
 pub(crate) fn handle_load_robot(
     asset_server: Res<AssetServer>,
     mut er_load_robot: EventReader<LoadRobot>,
@@ -223,12 +303,14 @@ pub(crate) fn handle_load_robot(
 ) {
     for event in er_load_robot.read() {
         let interaction_groups = event.interaction_groups.clone();
+        let translation_shift = event.translation_shift.clone();
         let mesh_dir = Some(event.clone().mesh_dir);
         let robot_handle: Handle<UrdfAsset> = asset_server.load_with_settings(
             event.clone().urdf_path,
             move |s: &mut _| {
                 *s = RpyAssetLoaderSettings {
                     mesh_dir: mesh_dir.clone(),
+                    translation_shift,
                     interaction_groups,
                 };
             }
