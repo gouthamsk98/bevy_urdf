@@ -114,14 +114,14 @@ pub(crate) fn handle_spawn_robot(
                         )
                 );
                 // Add this code here to disable sleeping for all the rigid bodies
-                if let Some(ref handles) = maybe_rapier_handles {
-                    for link in &handles.links {
-                        if let Some(body) = rigid_body_set.bodies.get_mut(link.body) {
-                            body.activation_mut().sleeping = false;
-                            body.activation_mut().angular_threshold = -1.0;
-                        }
-                    }
-                }
+                // if let Some(ref handles) = maybe_rapier_handles {
+                //     for link in &handles.links {
+                //         if let Some(body) = rigid_body_set.bodies.get_mut(link.body) {
+                //             body.activation_mut().sleeping = false;
+                //             body.activation_mut().angular_threshold = -1.0;
+                //         }
+                //     }
+                // }
                 break;
             }
 
