@@ -201,7 +201,7 @@ pub(crate) fn handle_spawn_robot(
 
                     let ec = children.spawn((
                         mesh_3d,
-                        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.4, 0.3))),
+                        MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.9))),
                         UrdfRobotRigidBodyHandle(body_handles[index]),
                         RapierContextEntityLink(rapier_context_simulation_entity),
                         transform,
