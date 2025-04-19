@@ -167,7 +167,9 @@ pub(crate) fn handle_spawn_robot(
                                     )
                                 )
                             ),
-                        urdf_rs::Geometry::Cylinder { .. } => todo!(),
+                        urdf_rs::Geometry::Cylinder { radius, length } => {
+                            Mesh3d(meshes.add(Cylinder::new(radius as f32, length as f32)))
+                        }
                         urdf_rs::Geometry::Capsule { .. } => todo!(),
                         urdf_rs::Geometry::Sphere { radius } => {
                             Mesh3d(meshes.add(Sphere::new(radius as f32)))
