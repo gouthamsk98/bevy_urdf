@@ -199,7 +199,7 @@ pub(crate) fn handle_spawn_robot(
                     );
                     let bevy_vec = quat_fix.mul_vec3(rapier_vec);
 
-                    let transform = Transform::from_translation(bevy_vec);
+                    let transform = Transform::from_translation(bevy_vec).with_rotation(bevy_quat);
 
                     let ec = children.spawn((
                         mesh_3d,
