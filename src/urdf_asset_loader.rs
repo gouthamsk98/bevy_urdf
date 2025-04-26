@@ -1,12 +1,9 @@
 use std::path::Path;
 
-use bevy::{
-    asset::{io::Reader, AssetLoader, LoadContext},
-    prelude::*,
-};
-use rapier3d::{na::Translation3, prelude::*};
-use rapier3d_urdf::{UrdfLoaderOptions, UrdfRobot};
-use serde::{Deserialize, Serialize};
+use bevy::{ asset::{ io::Reader, AssetLoader, LoadContext }, prelude::* };
+use rapier3d::{ na::Translation3, prelude::* };
+use rapier3d_urdf::{ UrdfLoaderOptions, UrdfRobot };
+use serde::{ Deserialize, Serialize };
 use thiserror::Error;
 use urdf_rs::Robot;
 
@@ -29,8 +26,7 @@ pub struct RpyAssetLoaderSettings {
 #[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum UrdfAssetLoaderError {
-    #[error("Could not load file: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("Could not load file: {0}")] Io(#[from] std::io::Error),
 }
 
 impl AssetLoader for RpyAssetLoader {
@@ -42,20 +38,27 @@ impl AssetLoader for RpyAssetLoader {
         &self,
         reader: &mut dyn Reader,
         settings: &RpyAssetLoaderSettings,
-        _load_context: &mut LoadContext<'_>,
+        _load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
         let content = std::str::from_utf8(&bytes).unwrap();
 
-        let mut isometry: nalgebra::Isometry<f32, nalgebra::Unit<nalgebra::Quaternion<f32>>, 3> =
-            Isometry::rotation(Vector::x() * std::f32::consts::FRAC_PI_2);
+        // let mut isometry: nalgebra::Isometry<f32, nalgebra::Unit<nalgebra::Quaternion<f32>>, 3> =
+        //     Isometry::rotation(Vector::x() * std::f32::consts::FRAC_PI_2);
+        let mut isometry = Isometry::identity(); // Start with identity transformation
+        // For REP-103 compliance: x forward, y left, z up
+        // This might need to be adjusted based on the input format of your URDF files
+        let rep103_orientation = nalgebra::UnitQuaternion::from_euler_angles(
+            0.0, // roll - around x
+            0.0, // pitch - around y
+            0.0 // yaw - around z
+        );
         if let Some(translaction_shift) = settings.translation_shift {
-            isometry.append_translation_mut(&Translation3::new(
-                translaction_shift.x,
-                translaction_shift.y,
-                translaction_shift.z,
-            ));
+            // isometry.append_translation_mut(
+            //     &Translation3::new(translaction_shift.x, translaction_shift.y, translaction_shift.z)
+            // );
+            isometry.append_rotation_mut(&rep103_orientation);
         }
 
         let options = UrdfLoaderOptions {

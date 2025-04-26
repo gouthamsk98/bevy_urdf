@@ -1,16 +1,27 @@
-use bevy::{prelude::*, utils::hashbrown::HashMap};
-use bevy_rapier3d::prelude::{RapierContextJoints, RapierRigidBodySet};
+use bevy::{ prelude::*, utils::hashbrown::HashMap };
+use bevy_rapier3d::prelude::{ RapierContextJoints, RapierRigidBodySet };
 use rapier3d::prelude::Collider;
-use urdf_rs::{Geometry, Pose};
+use urdf_rs::{ Geometry, Pose };
 
 use crate::{
     events::{
-        handle_control_motors, handle_despawn_robot, handle_load_robot, handle_spawn_robot,
-        handle_wait_robot_loaded, ControlMotors, DespawnRobot, LoadRobot, RobotLoaded,
-        RobotSpawned, SensorsRead, SpawnRobot, URDFRobot, UrdfRobotRigidBodyHandle,
+        handle_control_motors,
+        handle_despawn_robot,
+        handle_load_robot,
+        handle_spawn_robot,
+        handle_wait_robot_loaded,
+        ControlMotors,
+        DespawnRobot,
+        LoadRobot,
+        RobotLoaded,
+        RobotSpawned,
+        SensorsRead,
+        SpawnRobot,
+        URDFRobot,
+        UrdfRobotRigidBodyHandle,
         WaitRobotLoaded,
     },
-    urdf_asset_loader::{self, UrdfAsset},
+    urdf_asset_loader::{ self, UrdfAsset },
 };
 pub struct UrdfPlugin;
 
@@ -25,36 +36,26 @@ impl Plugin for UrdfPlugin {
             .add_event::<RobotLoaded>()
             .add_event::<SensorsRead>()
             .add_event::<ControlMotors>()
-            .add_systems(
-                Update,
-                (sync_robot_geometry, adjust_urdf_robot_mean_position).chain(),
-            )
-            .add_systems(
-                Update,
-                (
-                    handle_spawn_robot,
-                    handle_despawn_robot,
-                    handle_load_robot,
-                    handle_wait_robot_loaded,
-                    read_sensors,
-                    handle_control_motors,
-                ),
-            )
+            .add_systems(Update, (sync_robot_geometry, adjust_urdf_robot_mean_position).chain())
+            .add_systems(Update, (
+                handle_spawn_robot,
+                handle_despawn_robot,
+                handle_load_robot,
+                handle_wait_robot_loaded,
+                read_sensors,
+                handle_control_motors,
+            ))
             .init_asset::<urdf_asset_loader::UrdfAsset>();
     }
 }
 
 pub fn extract_robot_geometry(
-    robot: &UrdfAsset,
+    robot: &UrdfAsset
 ) -> Vec<(usize, Option<Geometry>, Pose, Option<Collider>)> {
     let mut result: Vec<(usize, Option<Geometry>, Pose, Option<Collider>)> = Vec::new();
     for (i, link) in robot.robot.links.iter().enumerate() {
         let colliders = robot.urdf_robot.links[i].colliders.clone();
-        let collider = if colliders.len() == 1 {
-            Some(colliders[0].clone())
-        } else {
-            None
-        };
+        let collider = if colliders.len() == 1 { Some(colliders[0].clone()) } else { None };
 
         let geometry = if !link.visual.is_empty() {
             Some(link.visual[0].geometry.clone())
@@ -71,7 +72,7 @@ pub fn extract_robot_geometry(
 
 fn sync_robot_geometry(
     mut q_rapier_robot_bodies: Query<(Entity, &mut Transform, &mut UrdfRobotRigidBodyHandle)>,
-    q_rapier_rigid_body_set: Query<(&RapierRigidBodySet,)>,
+    q_rapier_rigid_body_set: Query<(&RapierRigidBodySet,)>
 ) {
     for rapier_rigid_body_set in q_rapier_rigid_body_set.iter() {
         for (_, mut transform, body_handle) in q_rapier_robot_bodies.iter_mut() {
@@ -80,19 +81,21 @@ fn sync_robot_geometry(
 
                 let rapier_rot = rapier_pos.rotation;
 
-                let quat_fix = Quat::from_rotation_z(std::f32::consts::PI)
-                    * Quat::from_rotation_y(std::f32::consts::PI);
-                let bevy_quat = quat_fix
-                    * Quat::from_array([rapier_rot.i, rapier_rot.j, rapier_rot.k, rapier_rot.w]);
+                let quat_fix =
+                    Quat::from_rotation_z(std::f32::consts::PI) *
+                    Quat::from_rotation_y(std::f32::consts::PI);
+                let bevy_quat =
+                    quat_fix *
+                    Quat::from_array([rapier_rot.i, rapier_rot.j, rapier_rot.k, rapier_rot.w]);
 
                 let rapier_vec = Vec3::new(
                     rapier_pos.translation.x,
                     rapier_pos.translation.y,
-                    rapier_pos.translation.z,
+                    rapier_pos.translation.z
                 );
 
                 let bevy_vec = quat_fix.mul_vec3(rapier_vec);
-                *transform = Transform::from_translation(bevy_vec).with_rotation(bevy_quat);
+                *transform = Transform::from_translation(bevy_vec);
             }
         }
     }
@@ -103,8 +106,8 @@ fn adjust_urdf_robot_mean_position(
     mut q_rapier_robot_bodies: Query<(Entity, &UrdfRobotRigidBodyHandle, &mut Transform, &Parent)>,
     mut q_urdf_robots: Query<
         (Entity, &mut Transform, &URDFRobot),
-        Without<UrdfRobotRigidBodyHandle>,
-    >,
+        Without<UrdfRobotRigidBodyHandle>
+    >
 ) {
     let mut robot_parts: HashMap<Handle<UrdfAsset>, Vec<Transform>> = HashMap::new();
     for (_, _, transform, parent) in q_rapier_robot_bodies.iter() {
@@ -113,15 +116,13 @@ fn adjust_urdf_robot_mean_position(
             .map(|(_, _, urdf)| urdf.handle.clone());
 
         if urdf_robot_result.is_ok() {
-            robot_parts
-                .entry(urdf_robot_result.unwrap())
-                .or_default()
-                .push(transform.clone());
+            robot_parts.entry(urdf_robot_result.unwrap()).or_default().push(transform.clone());
         }
     }
 
-    let quat_fix =
-        Quat::from_rotation_z(std::f32::consts::PI) * Quat::from_rotation_y(std::f32::consts::PI);
+    // let quat_fix =
+    //     Quat::from_rotation_z(std::f32::consts::PI) * Quat::from_rotation_y(std::f32::consts::PI);
+    let quat_fix = Quat::IDENTITY; // If your source is already in REP-103, or adjust as needed
 
     let mut mean_translations: HashMap<Handle<UrdfAsset>, Vec3> = HashMap::new();
     // Calculate mean transfrom for each URDF asset
@@ -134,9 +135,7 @@ fn adjust_urdf_robot_mean_position(
         mean_translation /= transforms.len() as f32;
         mean_translation = quat_fix.mul_vec3(mean_translation);
 
-        mean_translations
-            .entry(urdf_handle.clone())
-            .insert(mean_translation);
+        mean_translations.entry(urdf_handle.clone()).insert(mean_translation);
     }
 
     // set urdf_robots translation to mean transform
@@ -164,7 +163,7 @@ fn read_sensors(
     q_urdf_robots: Query<(Entity, &URDFRobot)>,
     q_urdf_rigid_bodies: Query<(Entity, &Parent, &Transform, &UrdfRobotRigidBodyHandle)>,
     mut ew_sensors_read: EventWriter<SensorsRead>,
-    q_rapier_joints: Query<(&RapierContextJoints, &RapierRigidBodySet)>,
+    q_rapier_joints: Query<(&RapierContextJoints, &RapierRigidBodySet)>
 ) {
     let mut readings_hashmap: HashMap<Handle<UrdfAsset>, Vec<Transform>> = HashMap::new();
     let mut joint_angles: HashMap<Handle<UrdfAsset>, Vec<f32>> = HashMap::new();
@@ -182,8 +181,9 @@ fn read_sensors(
         for (rapier_context_joints, rapier_rigid_bodies) in q_rapier_joints.iter() {
             for joint_link_handle in urdf_robot.rapier_handles.joints.iter() {
                 if let Some(handle) = joint_link_handle.joint {
-                    if let Some((multibody, index)) =
-                        rapier_context_joints.multibody_joints.get(handle)
+                    if
+                        let Some((multibody, index)) =
+                            rapier_context_joints.multibody_joints.get(handle)
                     {
                         if let Some(link) = multibody.link(index) {
                             let joint = link.joint.data;
